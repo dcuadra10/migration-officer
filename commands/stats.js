@@ -197,4 +197,4 @@ class StatsCommand {
     }
 }
 
-module.exports = new StatsCommand();
+module.exports = StatsCommand;

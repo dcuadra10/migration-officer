@@ -242,10 +242,8 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-app.listen(config.PORT, '0.0.0.0', () => {
-    console.log(`Express server running on port ${config.PORT}`);
-    console.log(`Dashboard available at http://localhost:${config.PORT}`);
-});
-
-module.exports = app;
+// Export server setup function instead of starting immediately
+module.exports = function(app, database) {
+    // Since the configuration is already done above, we just need to export the app
+    return app;
+};
