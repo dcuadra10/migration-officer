@@ -22,7 +22,7 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm install discord.js express multer uuid dotenv && node index.js"
-waitForPort = 8000
+waitForPort = 3000
 
 [[ports]]
 localPort = 3000
