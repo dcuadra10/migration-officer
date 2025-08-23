@@ -90,4 +90,4 @@ class UploadCommand {
     }
 }
 
-module.exports = new UploadCommand();
+module.exports = UploadCommand;

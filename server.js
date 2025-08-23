@@ -242,8 +242,5 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Export server setup function instead of starting immediately
-module.exports = function(app, database) {
-    // Since the configuration is already done above, we just need to export the app
-    return app;
-};
+// Don't start server here - it's started in index.js
+module.exports = app;
