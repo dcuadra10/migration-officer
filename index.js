@@ -1,47 +1,40 @@
-require('dotenv').config(); // Carga variables desde .env
-
+require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 const axios = require('axios');
-const { handleUserStep } = require('./stepsManager');
-const { handleAdminResponse } = require('./submitMigration');
+const { handleUserStep, handleChannelDelete } = require('./stepsManager');
+const {
+  notifyAdminsForApproval,
+  handleAdminResponse,
+  handleUserDM
+} = require('./submitMigration');
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const HEALTHCHECK_URL = process.env.HEALTHCHECK_URL;
 
 if (!TOKEN || !HEALTHCHECK_URL) {
-  console.error('❌ Faltan variables en .env: DISCORD_TOKEN o HEALTHCHECK_URL');
+  console.error('❌ Missing .env variables');
   process.exit(1);
 }
 
-// 🟢 Servidor Express
+// 🌐 Express server for uptime monitoring
 const app = express();
+let lastPing = { method: null, timestamp: null };
 
-// 🧠 Estado del último ping recibido
-let lastPing = {
-  method: null,
-  timestamp: null
-};
-
-// Endpoint para monitoreo pasivo (Better Uptime)
 app.get('/health', (req, res) => {
   lastPing = { method: 'GET', timestamp: new Date().toISOString() };
-  console.log(`[HEALTH] GET recibido ✅: ${lastPing.timestamp}`);
+  console.log(`[HEALTH] GET ✅: ${lastPing.timestamp}`);
   res.status(200).send('✅ Healthcheck OK');
 });
 
-// Endpoint para consultar el estado del último ping
 app.get('/status', (req, res) => {
-  if (!lastPing.timestamp) {
-    return res.status(200).send('⏳ No se ha recibido ningún ping aún.');
-  }
+  if (!lastPing.timestamp) return res.status(200).send('⏳ No ping received yet.');
   res.status(200).json({
     lastMethod: lastPing.method,
     lastTimestamp: lastPing.timestamp
   });
 });
 
-// Servidor activo
 app.listen(3000, () => {
   console.log('🌐 Express server running on port 3000');
 });
@@ -52,38 +45,51 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.DirectMessages
   ],
-  partials: ['CHANNEL'], // Necesario para DMs
+  partials: ['CHANNEL']
 });
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 });
 
-// 🔄 Flujo de migración y comandos admin
 client.on('messageCreate', async (msg) => {
   if (msg.author.bot) return;
 
-  console.log(`[DISCORD] Mensaje recibido de ${msg.author.username}: ${msg.content}`);
+  const content = msg.content.trim();
 
-  // Flujo de usuario
-  handleUserStep(msg);
-
-  // Comandos de admin
-  if (msg.content.startsWith('!approve') || msg.content.startsWith('!deny')) {
-    handleAdminResponse(msg);
+  // 📩 Mensaje por DM
+  if (msg.channel.type === 1) {
+    return handleUserDM(msg);
   }
+
+  // 🛡️ Comandos de admin
+  if (
+    content.startsWith('!approve') ||
+    content.startsWith('!deny') ||
+    content.startsWith('!cancel')
+  ) {
+    return handleAdminResponse(msg);
+  }
+
+  // 👤 Flujo de usuario
+  return handleUserStep(msg);
 });
 
-// ⏱ Ping activo a Healthchecks.io cada minuto
+client.on('channelDelete', handleChannelDelete);
+
+// 🔁 Ping de salud cada minuto
 setInterval(() => {
-  axios.get(HEALTHCHECK_URL)
+  axios
+    .get(HEALTHCHECK_URL)
     .then(() => {
       lastPing = { method: 'OUTBOUND', timestamp: new Date().toISOString() };
-      console.log(`[HEALTH] Ping enviado a Healthchecks.io ✅: ${lastPing.timestamp}`);
+      console.log(`[HEALTH] Ping sent ✅: ${lastPing.timestamp}`);
     })
-    .catch(err => console.error(`[HEALTH] ❌ Error al enviar ping: ${err.message}`));
-}, 60 * 1000); // cada 1 minuto
+    .catch((err) =>
+      console.error(`[HEALTH] ❌ Ping error: ${err.message}`)
+    );
+}, 60 * 1000);
 
 client.login(TOKEN);
