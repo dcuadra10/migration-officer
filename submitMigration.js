@@ -5,6 +5,20 @@ function getFlag(lang) {
   return lang === 'es' ? '🇪🇸 Español' : '🇺🇸 English';
 }
 
+async function tryCloseTicketChannel(msg) {
+  const channel = msg.channel;
+  const name = channel.name.toLowerCase();
+  const isTicket = name.startsWith('ticket-') || (channel.parent && channel.parent.name.toLowerCase().includes('ticket'));
+
+  if (isTicket && channel.deletable) {
+    try {
+      await channel.delete('✅ Ticket cerrado automáticamente tras completar la solicitud.');
+    } catch (err) {
+      console.error(`❌ Error al cerrar el ticket: ${err.message}`);
+    }
+  }
+}
+
 async function notifyAdminsForApproval(userState, msg) {
   const embed = {
     title: '📝 New Migration Request',
@@ -98,7 +112,29 @@ function handleAdminResponse(msg) {
 
 async function handleUserDM(msg) {
   const userId = msg.author.id;
-  const content = msg.content.toLowerCase();
+  const content = msg.content.toLowerCase().trim();
+
+  if (content === '!cancel') {
+    if (userResponses.has(userId)) {
+      userResponses.delete(userId);
+      await msg.reply('🗑️ Tu solicitud de migración ha sido cancelada.');
+
+      for (const adminId of ADMIN_IDS) {
+        try {
+          const adminUser = await msg.client.users.fetch(adminId);
+          await adminUser.send(`🚫 <@${userId}> ha cancelado su solicitud de migración.`);
+        } catch (err) {
+          console.error(`❌ Error notificando cancelación a ${adminId}: ${err.message}`);
+        }
+      }
+
+      await tryCloseTicketChannel(msg);
+      return;
+    } else {
+      return msg.reply('⚠️ No tienes ninguna solicitud activa para cancelar.');
+    }
+  }
+
   if (!userResponses.has(userId)) return;
 
   const userState = userResponses.get(userId);
@@ -156,6 +192,8 @@ async function handleUserDM(msg) {
   await msg.reply(lang === 'es'
     ? '✅ Tu respuesta fue enviada a los administradores.'
     : '✅ Your response has been sent to the admins.');
+
+  await tryCloseTicketChannel(msg);
 }
 
 module.exports = {
