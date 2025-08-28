@@ -1,4 +1,5 @@
 const pendingUserSteps = new Map();
+const { notifyAdminsForApproval } = require('./submitMigration');
 
 const translations = {
   es: {
@@ -27,10 +28,10 @@ function detectLanguage(content) {
   const lowered = content.toLowerCase();
   if (lowered.includes('hola') || lowered.includes('buenas')) return 'es';
   if (lowered.includes('hello') || lowered.includes('hi')) return 'en';
-  return 'en'; // default fallback
+  return 'en';
 }
 
-function handleUserStep(msg) {
+async function handleUserStep(msg) {
   const userId = msg.author.id;
   const content = msg.content.trim();
   let userState = pendingUserSteps.get(userId);
@@ -80,8 +81,18 @@ function handleUserStep(msg) {
       userState.profile_image = msg.attachments.first().url;
       userState.step = 'done';
       msg.reply(t.confirm);
-      const { notifyAdminsForApproval } = require('./submitMigration');
-      return notifyAdminsForApproval(userState, msg);
+
+      const summary = `
+🧑 Nickname: ${userState.nickname}
+🆔 ID: ${userState.ingame_id}
+🏰 Kingdom: ${userState.kingdom}
+⚡ Power: ${userState.power}
+🎯 Kill Points: ${userState.kp}
+💀 Deaths: ${userState.deaths}
+📸 Screenshot: ${userState.profile_image}
+`.trim();
+
+      return notifyAdminsForApproval(msg, userId, userState.language, { summary });
   }
 }
 
