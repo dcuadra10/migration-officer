@@ -10,17 +10,23 @@ async function handleUserConfirmationReaction({ client, reaction, user }) {
   for (const [userId, request] of pendingRequests.entries()) {
     if (user.id !== userId) continue;
     if (messageId !== request.lastMessageId) continue;
-    if (emoji !== '✅') continue;
+    if (emoji !== '✅' && emoji !== '❌') continue;
 
     const { channelId, language } = request;
     const lang = language || 'en';
 
     const messages = {
-      es: '✅ Confirmación recibida. Gracias por migrar con nosotros.',
-      en: '✅ Confirmation received. Thank you for migrating with us.'
+      confirm: {
+        es: '✅ Confirmación recibida. Gracias por migrar con nosotros.',
+        en: '✅ Confirmation received. Thank you for migrating with us.'
+      },
+      cancel: {
+        es: '❌ Has cancelado tu migración. Si fue un error, vuelve a iniciar el proceso.',
+        en: '❌ You have cancelled your migration. If this was a mistake, please start again.'
+      }
     };
 
-    const text = messages[lang] || messages.en;
+    const text = emoji === '✅' ? messages.confirm[lang] : messages.cancel[lang];
 
     const channel = await client.channels.fetch(channelId).catch(() => null);
     if (!channel) {
@@ -45,7 +51,7 @@ async function handleUserConfirmationReaction({ client, reaction, user }) {
       try {
         await member.send(text);
         dmSent = true;
-        console.log(`📬 Confirmación enviada por DM a ${member.user.tag}`);
+        console.log(`📬 Mensaje enviado por DM a ${member.user.tag}`);
       } catch (err) {
         console.error(`❌ No se pudo enviar DM: ${err.message}`);
       }
@@ -53,7 +59,7 @@ async function handleUserConfirmationReaction({ client, reaction, user }) {
 
     if ((origin === 'dm' || !dmSent) && channel) {
       try {
-        await channel.send(`📬 ${dmSent ? 'También' : ''} Confirmación enviada aquí:\n${text}`);
+        await channel.send(`📬 ${dmSent ? 'También' : ''} Mensaje enviado aquí:\n${text}`);
       } catch (err) {
         console.error(`❌ No se pudo enviar mensaje al canal: ${err.message}`);
       }
@@ -61,7 +67,7 @@ async function handleUserConfirmationReaction({ client, reaction, user }) {
 
     pendingRequests.delete(userId);
     saveRequests();
-    console.log(`✅ <@${userId}> confirmó su migración manualmente`);
+    console.log(`✅ <@${userId}> reaccionó con ${emoji} → solicitud eliminada`);
   }
 }
 
