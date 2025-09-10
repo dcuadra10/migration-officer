@@ -49,8 +49,7 @@ module.exports = {
     const [action, , userId, lang = 'en'] = interaction.customId.split('_');
     const targetUser = await interaction.client.users.fetch(userId);
     const request = pendingRequests.get(userId);
-
-    if (action !== 'migrate' || !request) return;
+    if (!request) return;
 
     if (interaction.customId.startsWith('migrate_no')) {
       await interaction.reply({ content: getLocalizedText(lang, 'approved'), ephemeral: true });
@@ -61,7 +60,6 @@ module.exports = {
         console.error(`❌ No se pudo enviar DM a ${targetUser.tag}: ${err.message}`);
       }
 
-      // Webhook: registrar decisión
       const payload = {
         discord_id: userId,
         decision: 'no_migrate',
@@ -80,7 +78,6 @@ module.exports = {
         console.error('❌ Error al enviar decisión al webhook:', err.message);
       }
 
-      // Actualizar embed de aprobación
       try {
         const approvalChannel = await interaction.client.channels.fetch(request.approvalChannelId);
         const approvalMessage = await approvalChannel.messages.fetch(request.approvalMessageId);
@@ -93,39 +90,4 @@ module.exports = {
         console.error('❌ No se pudo editar el embed de aprobación:', err.message);
       }
 
-      // Cerrar canal
-      const channel = await interaction.client.channels.fetch(request.channelId).catch(() => null);
-      if (channel?.name?.startsWith('ticket-')) {
-        try {
-          await channel.send(getLocalizedText(lang, 'closing'));
-          setTimeout(() => channel.delete().catch(() => {}), 5000);
-        } catch (err) {
-          console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
-        }
-      }
-      const request = require('./submitMigration').pendingRequests.get(userId);
-if (request?.approvalChannelId && request?.approvalMessageId) {
-  try {
-    const approvalChannel = await interaction.client.channels.fetch(request.approvalChannelId);
-    const approvalMessage = await approvalChannel.messages.fetch(request.approvalMessageId);
-    const embed = approvalMessage.embeds[0];
-    const updatedEmbed = EmbedBuilder.from(embed).setFooter({
-      text: `Estado: no migrará (usuario)`
-    });
-    await approvalMessage.edit({ embeds: [updatedEmbed] });
-  } catch (err) {
-    console.error('❌ No se pudo editar el embed de aprobación:', err.message);
-  }
-}
-
-
-      pendingRequests.delete(userId);
-      saveRequests();
-    }
-
-    if (interaction.customId.startsWith('migrate_yes')) {
-      await interaction.reply({ content: getLocalizedText(lang, 'confirmed'), ephemeral: true });
-    }
-  }
-};
-
+      const channel = await interaction.client.channels.fetch(request
