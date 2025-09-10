@@ -179,6 +179,7 @@ if (channel?.name?.startsWith('ticket-')) {
     console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
   }
 }
+    }
 
 
   // 🚫 Reacción de cancelación del usuario
