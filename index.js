@@ -90,6 +90,11 @@ client.on('interactionCreate', async interaction => {
 });
 
 
+const { EmbedBuilder } = require('discord.js');
+const fetch = require('node-fetch');
+const { sendMigrationPrompt } = require('./migrationDecision');
+const { pendingRequests, saveRequests } = require('./submitMigration');
+
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot || !reaction.message) return;
 
@@ -97,7 +102,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
   const msg = reaction.message;
 
   // ✅❌ Reacciones de admins en mensaje de aprobación
-  if (msg.embeds?.[0]?.title?.includes('solicitud de migración')) {
+  if (msg.embeds?.[0]?.title?.toLowerCase()?.includes('solicitud de migración')) {
     const match = msg.embeds[0].description?.match(/<@(\d+)>/);
     if (!match) return;
 
@@ -118,8 +123,83 @@ client.on('messageReactionAdd', async (reaction, user) => {
       deny: {
         es: '❌ Tu migración fue rechazada. Contacta a soporte si tienes dudas.',
         en: '❌ Your migration was denied. Contact support if you have questions.'
+      },
+      prompt: {
+        es: 'Por favor confirma si migrarás usando los botones.',
+        en: 'Please confirm whether you will migrate using the buttons below.'
+      },
+      closing: {
+        es: '📌 Este canal se cerrará en breve...',
+        en: '📌 This channel will close shortly...'
       }
     };
+
+    const text = emoji === '✅' ? messages.approve[lang] : messages.deny[lang];
+    let dmSent = false;
+
+    try {
+      if (!member) throw new Error('Miembro no encontrado en cache');
+      await member.send(text);
+      dmSent = true;
+      console.log(`📬 DM enviado a ${member.user.tag}: ${text}`);
+    } catch (err) {
+      console.error(`❌ Falló el DM a <@${userId}>: ${err.message}`);
+    }
+
+    await channel?.send(`${emoji} <@${userId}> ha sido ${emoji === '✅' ? 'aprobado' : 'rechazado'}.`);
+    if (!dmSent) {
+      await channel?.send(`⚠️ No se pudo enviar DM a <@${userId}>. Enviando mensaje aquí:\n${text}`);
+    }
+
+    if (emoji === '✅') {
+      await channel?.send(messages.prompt[lang]);
+      const targetUser = await client.users.fetch(userId);
+      await sendMigrationPrompt(channel, targetUser, lang);
+
+      const payload = {
+        discord_id: userId,
+        decision: 'approved_by_admin',
+        language: lang,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        await fetch(process.env.SHEETS_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        console.log(`📤 Webhook enviado: aprobación admin`);
+      } catch (err) {
+        console.error('❌ Error al enviar datos al webhook:', err.message);
+      }
+    }
+
+    try {
+      const approvalChannel = await client.channels.fetch(request.approvalChannelId);
+      const approvalMessage = await approvalChannel.messages.fetch(request.approvalMessageId);
+      const embed = approvalMessage.embeds[0];
+      const updatedEmbed = EmbedBuilder.from(embed).setFooter({
+        text: `Estado: ${emoji === '✅' ? 'aprobado' : 'rechazado'} (admin)`
+      });
+      await approvalMessage.edit({ embeds: [updatedEmbed] });
+    } catch (err) {
+      console.error('❌ No se pudo editar el embed de aprobación:', err.message);
+    }
+
+    if (emoji === '❌' && channel?.name?.startsWith('ticket-')) {
+      try {
+        await channel.send(messages.closing[lang]);
+        setTimeout(() => channel.delete().catch(() => {}), 5000);
+      } catch (err) {
+        console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
+      }
+    }
+
+    pendingRequests.delete(userId);
+    saveRequests();
+  }
+});
 
     const text = emoji === '✅' ? messages.approve[lang] : messages.deny[lang];
 
