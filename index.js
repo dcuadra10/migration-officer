@@ -201,7 +201,7 @@ if (channel?.name?.startsWith('ticket-')) {
       }
     }
   }
-}); // ← cierre correcto del client.on('messageReactionAdd')
+}; // ← cierre correcto del client.on('messageReactionAdd')
 
 
 
