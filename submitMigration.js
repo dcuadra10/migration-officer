@@ -1,7 +1,6 @@
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
 const REQUESTS_FILE = path.join(__dirname, 'requests.json');
 const pendingRequests = new Map();
 
@@ -89,24 +88,12 @@ async function submitMigration(interaction) {
 
   const channel = await guild.channels.create({
     name: channelName,
-    type: 0, // GUILD_TEXT
+    type: 0,
     permissionOverwrites: [
-      {
-        id: guild.roles.everyone,
-        deny: [PermissionsBitField.Flags.ViewChannel]
-      },
-      {
-        id: userId,
-        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
-      },
-      {
-        id: process.env.ADMIN_ROLE_ID,
-        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.AddReactions]
-      },
-      {
-        id: client.user.id,
-        allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AddReactions]
-      }
+      { id: guild.roles.everyone, deny: [PermissionsBitField.Flags.ViewChannel] },
+      { id: userId, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+      { id: process.env.ADMIN_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.AddReactions] },
+      { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages, PermissionsBitField.Flags.AddReactions] }
     ]
   });
 
@@ -125,13 +112,8 @@ async function submitMigration(interaction) {
   const ticketMsg = await channel.send({ embeds: [ticketEmbed] });
   await ticketMsg.react('🚫');
 
-  // ✅ Botones de migración en el idioma correcto
-  try {
-    const { sendMigrationPrompt } = require('./migrationDecision');
-    await sendMigrationPrompt(channel, interaction.user, lang);
-  } catch (err) {
-    console.error('❌ Error al cargar sendMigrationPrompt:', err.message);
-  }
+  const { sendMigrationPrompt } = require('./migrationDecision');
+  await sendMigrationPrompt(channel, interaction.user, lang);
 
   pendingRequests.set(userId, {
     channelId: channel.id,
@@ -151,7 +133,6 @@ async function submitMigration(interaction) {
   });
 }
 
-// ✅ Exportar funciones
 module.exports = {
   submitMigration,
   notifyAdminsForApproval,
@@ -160,4 +141,3 @@ module.exports = {
   pendingRequests,
   saveRequests
 };
-
