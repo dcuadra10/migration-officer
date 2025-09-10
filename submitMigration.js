@@ -2,6 +2,8 @@ const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios'); // Línea 1
+const { sendMigrationPrompt } = require('./components/migrationDecision');
+
 
 async function submitMigration(userState, userId) { // Línea 3
   const payload = {
