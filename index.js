@@ -188,15 +188,15 @@ require('./handleUserConfirmationReaction').handleUserConfirmationReaction({ cli
     pendingRequests.delete(userId);
     saveRequests();
 
-    if (channel?.name?.startsWith('ticket-')) {
-      try {
-        await channel.send('📌 Este canal se cerrará en breve...');
-        setTimeout(() => channel.delete().catch(() => {}), 5000);
-      } catch (err) {
-        console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
-      }
-    }
+if (channel?.name?.startsWith('ticket-')) {
+  try {
+    await channel.send('📌 Este canal se cerrará en breve...');
+    setTimeout(() => channel.delete().catch(() => {}), 5000);
+  } catch (err) {
+    console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
   }
+}
+
 
   // 🚫 Reacción de cancelación del usuario
   for (const [userId, request] of pendingRequests.entries()) {
