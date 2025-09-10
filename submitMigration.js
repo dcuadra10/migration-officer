@@ -2,8 +2,6 @@ const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
-const { sendMigrationPrompt } = require('./migrationDecision');
-
 const REQUESTS_FILE = path.join(__dirname, 'requests.json');
 const pendingRequests = new Map();
 
@@ -44,7 +42,7 @@ async function notifyAdminsForApproval(client, userId, language, summary) {
   await msg.react('✅');
   await msg.react('❌');
 
-  return msg.id;
+  return { messageId: msg.id, channelId };
 }
 
 // 📩 Manejo de DM del usuario
@@ -113,7 +111,8 @@ async function submitMigration(interaction) {
   });
 
   const summary = '📝 El usuario ha solicitado migrar. Esperando aprobación.';
-  const approvalMessageId = await notifyAdminsForApproval(client, userId, lang, summary);
+  const { messageId: approvalMessageId, channelId: approvalChannelId } =
+    await notifyAdminsForApproval(client, userId, lang, summary);
 
   const ticketEmbed = new EmbedBuilder()
     .setTitle(lang === 'es' ? 'Solicitud enviada' : 'Request Submitted')
@@ -127,13 +126,18 @@ async function submitMigration(interaction) {
   await ticketMsg.react('🚫');
 
   // ✅ Botones de migración en el idioma correcto
-  await sendMigrationPrompt(channel, interaction.user, lang);
+  try {
+    const { sendMigrationPrompt } = require('./migrationDecision');
+    await sendMigrationPrompt(channel, interaction.user, lang);
+  } catch (err) {
+    console.error('❌ Error al cargar sendMigrationPrompt:', err.message);
+  }
 
   pendingRequests.set(userId, {
     channelId: channel.id,
     language: lang,
     lastMessageId: ticketMsg.id,
-    approvalChannelId: process.env.APPROVAL_CHANNEL_ID,
+    approvalChannelId,
     approvalMessageId
   });
 
@@ -156,3 +160,4 @@ module.exports = {
   pendingRequests,
   saveRequests
 };
+
