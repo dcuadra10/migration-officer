@@ -2,7 +2,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, ChannelType, EmbedBuilder } = require('discord.js');
 const express = require('express');
 const fetch = require('node-fetch');
-
+const { handleMigrationResponse } = require('./migrationDecision');
 
 
 const {
@@ -83,6 +83,12 @@ client.on('messageCreate', async (msg) => {
 
   return handleUserStep(msg);
 });
+
+client.on('interactionCreate', async interaction => {
+  const { handleMigrationResponse } = require('./migrationDecision');
+  await handleMigrationResponse(interaction);
+});
+
 
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot || !reaction.message) return;
