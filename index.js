@@ -155,24 +155,6 @@ await prompt.react('❌');
 request.lastMessageId = prompt.id;
 saveRequests();
 
-
-
-
-
-      try {
-        const res = await fetch(SHEETS_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await res.text();
-        console.log(`📤 Webhook enviado: ${result}`);
-      } catch (err) {
-        console.error('❌ Error al enviar datos al webhook:', err.message);
-      }
-    }
-
     // Actualizar embed de aprobación
     try {
       const approvalChannel = await client.channels.fetch(request.approvalChannelId);
