@@ -103,6 +103,21 @@ module.exports = {
           console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
         }
       }
+      const request = require('./submitMigration').pendingRequests.get(userId);
+if (request?.approvalChannelId && request?.approvalMessageId) {
+  try {
+    const approvalChannel = await interaction.client.channels.fetch(request.approvalChannelId);
+    const approvalMessage = await approvalChannel.messages.fetch(request.approvalMessageId);
+    const embed = approvalMessage.embeds[0];
+    const updatedEmbed = EmbedBuilder.from(embed).setFooter({
+      text: `Estado: no migrará (usuario)`
+    });
+    await approvalMessage.edit({ embeds: [updatedEmbed] });
+  } catch (err) {
+    console.error('❌ No se pudo editar el embed de aprobación:', err.message);
+  }
+}
+
 
       pendingRequests.delete(userId);
       saveRequests();
