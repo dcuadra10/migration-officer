@@ -90,4 +90,52 @@ module.exports = {
         console.error('❌ No se pudo editar el embed de aprobación:', err.message);
       }
 
-      const channel = await interaction.client.channels.fetch(request
+      const channel = await interaction.client.channels.fetch(request.channelId).catch(() => null);
+      if (channel?.name?.startsWith('ticket-')) {
+        try {
+          await channel.send(getLocalizedText(lang, 'closing'));
+          setTimeout(() => channel.delete().catch(() => {}), 5000);
+        } catch (err) {
+          console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
+        }
+      }
+
+      pendingRequests.delete(userId);
+      saveRequests();
+    }
+
+    if (interaction.customId.startsWith('migrate_yes')) {
+      await interaction.reply({ content: getLocalizedText(lang, 'confirmed'), ephemeral: true });
+
+      try {
+        const approvalChannel = await interaction.client.channels.fetch(request.approvalChannelId);
+        const approvalMessage = await approvalChannel.messages.fetch(request.approvalMessageId);
+        const embed = approvalMessage.embeds[0];
+        const updatedEmbed = EmbedBuilder.from(embed).setFooter({
+          text: `Estado: migrará (usuario)`
+        });
+        await approvalMessage.edit({ embeds: [updatedEmbed] });
+      } catch (err) {
+        console.error('❌ No se pudo editar el embed de aprobación:', err.message);
+      }
+
+      const payload = {
+        discord_id: userId,
+        decision: 'yes_migrate',
+        language: lang,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        await fetch(process.env.SHEETS_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        console.log(`📤 Webhook enviado para migrar: ${targetUser.tag}`);
+      } catch (err) {
+        console.error('❌ Error al enviar decisión al webhook:', err.message);
+      }
+    }
+  }
+};
