@@ -141,26 +141,20 @@ require('./handleUserConfirmationReaction').handleUserConfirmationReaction({ cli
 
     // ✅ Enviar datos al webhook solo si fue aprobado
     if (emoji === '✅') {
-      const prompt = await channel.send(`<@${userId}> ✅ Reacciona con este emoji para confirmar tu migración.`);
-request.lastMessageId = prompt.id;
-saveRequests();
+  const promptMessages = {
+    es: '✅ Reacciona con este emoji para confirmar tu migración.',
+    en: '✅ React with this emoji to confirm your migration.'
+  };
 
-      const payload = {
-        discord_id: userId,
-        discord_name: request.discord_name || '',
-        nickname: request.nickname || '',
-        ingame_id: request.ingame_id || '',
-        kingdom: request.kingdom || '',
-        power: request.power || '',
-        kp: request.kp || '',
-        deaths: request.deaths || '',
-        power_kp_image: request.profile_image || '',
-        created_at: new Date().toISOString(),
-        can_migrate: 'pending',
-        status: 'received',
-        language: request.language || 'en'
-        
-      };
+  const confirmText = promptMessages[lang] || promptMessages.en;
+
+  const prompt = await channel.send(`<@${userId}> ${confirmText}`);
+  await prompt.react('✅'); // El bot reacciona automáticamente
+
+  request.lastMessageId = prompt.id;
+  saveRequests();
+}
+
 
 
 
