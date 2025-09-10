@@ -120,6 +120,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         en: '❌ Your migration was denied. Contact support if you have questions.'
       }
     };
+require('./handleUserConfirmationReaction').handleUserConfirmationReaction({ client, reaction, user });
 
     const text = emoji === '✅' ? messages.approve[lang] : messages.deny[lang];
 
@@ -140,7 +141,10 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
     // ✅ Enviar datos al webhook solo si fue aprobado
     if (emoji === '✅') {
-      require('./confirmUserMigration').confirmUserMigration({ client, request });
+      const prompt = await channel.send(`<@${userId}> ✅ Reacciona con este emoji para confirmar tu migración.`);
+request.lastMessageId = prompt.id;
+saveRequests();
+
       const payload = {
         discord_id: userId,
         discord_name: request.discord_name || '',
