@@ -7,6 +7,8 @@
  * Si el DM falla, se responde en el canal como fallback.
  */
 
+const { ChannelType } = require('discord.js');
+
 async function confirmUserMigration({ client, request }) {
   const { channelId, language, discord_id } = request;
   const lang = language || 'en';
@@ -34,19 +36,23 @@ async function confirmUserMigration({ client, request }) {
     }
   }
 
-  const origin = channel.type === 1 ? 'dm' : 'channel'; // 1 = DM, 0 = GuildText
+  // Detectar origen del usuario (canal o DM)
+  const origin = channel.type === ChannelType.DM ? 'dm' : 'channel';
 
   let dmSent = false;
-  try {
-    if (origin === 'channel' && member) {
+
+  // Si el usuario inició por canal, intentamos enviar por DM
+  if (origin === 'channel' && member) {
+    try {
       await member.send(text);
       dmSent = true;
       console.log(`📬 Confirmación enviada por DM a ${member.user.tag}`);
+    } catch (err) {
+      console.error(`❌ No se pudo enviar DM: ${err.message}`);
     }
-  } catch (err) {
-    console.error(`❌ No se pudo enviar DM: ${err.message}`);
   }
 
+  // Si el usuario inició por DM o el DM falló, enviamos al canal
   if ((origin === 'dm' || !dmSent) && channel) {
     try {
       await channel.send(`📬 ${dmSent ? 'También' : ''} Confirmación enviada aquí:\n${text}`);
