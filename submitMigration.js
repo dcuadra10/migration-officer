@@ -2,7 +2,7 @@ const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios'); // Línea 1
-const { sendMigrationPrompt } = require('./components/migrationDecision');
+const { sendMigrationPrompt } = require('./migrationDecision');
 
 
 async function submitMigration(userState, userId) { // Línea 3
@@ -161,6 +161,8 @@ async function submitMigration(interaction) {
     ephemeral: true
   });
 }
+await sendMigrationPrompt(channel, interaction.user, lang);
+
 
 // ✅ Exportar funciones
 module.exports = { submitMigration }; // Línea 21
