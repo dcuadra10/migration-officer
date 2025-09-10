@@ -140,7 +140,6 @@ client.on('messageReactionAdd', async (reaction, user) => {
     let dmSent = false;
     try {
       if (!member) throw new Error('Miembro no encontrado en cache');
-      await member.send(text);
       dmSent = true;
       console.log(`📬 DM enviado a ${member.user.tag}: ${text}`);
     } catch (err) {
@@ -150,6 +149,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
     await channel?.send(`${emoji} <@${userId}> ha sido ${emoji === '✅' ? 'aprobado' : 'rechazado'}. Idioma: ${lang}`);
     if (!dmSent) {
       await channel?.send(`⚠️ No se pudo enviar DM a <@${userId}>. Enviando mensaje aquí:\n${text}`);
+      await member.send(text);
     }
 
     // ✅ Enviar datos al webhook solo si fue aprobado
