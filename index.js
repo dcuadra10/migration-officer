@@ -2,8 +2,14 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, ChannelType, EmbedBuilder } = require('discord.js');
 const express = require('express');
 const fetch = require('node-fetch');
-const { handleMigrationResponse, sendMigrationPrompt } = require('./migrationDecision');
-const { handleUserStep, handleChannelDelete } = require('./stepsManager');
+const { handleMigrationResponse } = require('./migrationDecision');
+
+
+const {
+  handleUserStep,
+  handleChannelDelete
+} = require('./stepsManager');
+
 const {
   notifyAdminsForApproval,
   handleUserDM,
@@ -79,16 +85,20 @@ client.on('messageCreate', async (msg) => {
 });
 
 client.on('interactionCreate', async interaction => {
+  const { handleMigrationResponse } = require('./migrationDecision');
   await handleMigrationResponse(interaction);
 });
+
+
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot || !reaction.message) return;
 
   const emoji = reaction.emoji.name;
   const msg = reaction.message;
 
-  if (msg.embeds?.[0]?.title?.toLowerCase()?.includes('solicitud de migración')) {
-    const match = msg.embeds[0].description?.match(/<@(\\d+)>/);
+  // ✅❌ Reacciones de admins en mensaje de aprobación
+  if (msg.embeds?.[0]?.title?.includes('solicitud de migración')) {
+    const match = msg.embeds[0].description?.match(/<@(\d+)>/);
     if (!match) return;
 
     const userId = match[1];
@@ -108,20 +118,12 @@ client.on('messageReactionAdd', async (reaction, user) => {
       deny: {
         es: '❌ Tu migración fue rechazada. Contacta a soporte si tienes dudas.',
         en: '❌ Your migration was denied. Contact support if you have questions.'
-      },
-      prompt: {
-        es: 'Por favor confirma si migrarás usando los botones.',
-        en: 'Please confirm whether you will migrate using the buttons below.'
-      },
-      closing: {
-        es: '📌 Este canal se cerrará en breve...',
-        en: '📌 This channel will close shortly...'
       }
     };
 
     const text = emoji === '✅' ? messages.approve[lang] : messages.deny[lang];
-    let dmSent = false;
 
+    let dmSent = false;
     try {
       if (!member) throw new Error('Miembro no encontrado en cache');
       await member.send(text);
@@ -131,16 +133,13 @@ client.on('messageReactionAdd', async (reaction, user) => {
       console.error(`❌ Falló el DM a <@${userId}>: ${err.message}`);
     }
 
-    await channel?.send(`${emoji} <@${userId}> ha sido ${emoji === '✅' ? 'aprobado' : 'rechazado'}.`);
+    await channel?.send(`${emoji} <@${userId}> ha sido ${emoji === '✅' ? 'aprobado' : 'rechazado'}. Idioma: ${lang}`);
     if (!dmSent) {
       await channel?.send(`⚠️ No se pudo enviar DM a <@${userId}>. Enviando mensaje aquí:\n${text}`);
     }
 
+    // ✅ Enviar datos al webhook solo si fue aprobado
     if (emoji === '✅') {
-      await channel?.send(messages.prompt[lang]);
-      const targetUser = await client.users.fetch(userId);
-      await sendMigrationPrompt(channel, targetUser, lang);
-
       const payload = {
         discord_id: userId,
         discord_name: request.discord_name || '',
@@ -157,6 +156,8 @@ client.on('messageReactionAdd', async (reaction, user) => {
         language: request.language || 'en'
       };
 
+
+
       try {
         const res = await fetch(SHEETS_WEBHOOK_URL, {
           method: 'POST',
@@ -171,6 +172,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
       }
     }
 
+    // Actualizar embed de aprobación
     try {
       const approvalChannel = await client.channels.fetch(request.approvalChannelId);
       const approvalMessage = await approvalChannel.messages.fetch(request.approvalMessageId);
@@ -183,17 +185,17 @@ client.on('messageReactionAdd', async (reaction, user) => {
       console.error('❌ No se pudo editar el embed de aprobación:', err.message);
     }
 
-    if (emoji === '❌' && channel?.name?.startsWith('ticket-')) {
+    pendingRequests.delete(userId);
+    saveRequests();
+
+    if (channel?.name?.startsWith('ticket-')) {
       try {
-        await channel.send(messages.closing[lang]);
+        await channel.send('📌 Este canal se cerrará en breve...');
         setTimeout(() => channel.delete().catch(() => {}), 5000);
       } catch (err) {
         console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
       }
     }
-
-    pendingRequests.delete(userId);
-    saveRequests();
   }
 
   // 🚫 Reacción de cancelación del usuario
@@ -219,4 +221,3 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
 client.on('channelDelete', handleChannelDelete);
 client.login(TOKEN);
-
