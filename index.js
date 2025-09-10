@@ -91,7 +91,6 @@ client.on('interactionCreate', async interaction => {
 
 
 const { sendMigrationPrompt } = require('./migrationDecision');
-const { pendingRequests, saveRequests } = require('./submitMigration');
 
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot || !reaction.message) return;
