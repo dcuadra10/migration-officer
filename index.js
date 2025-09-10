@@ -199,6 +199,6 @@ if (channel?.name?.startsWith('ticket-')) {
         console.error(`❌ No se pudo eliminar el canal ${channel.name}: ${err.message}`);
       }
     }
-}); // ← cierre correcto del client.on('messageReactionAdd')
+}; // ← cierre correcto del client.on('messageReactionAdd')
 client.on('channelDelete', handleChannelDelete);
 client.login(TOKEN);
