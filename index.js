@@ -140,6 +140,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
     // ✅ Enviar datos al webhook solo si fue aprobado
     if (emoji === '✅') {
+      require('./confirmUserMigration').confirmUserMigration({ client, request });
       const payload = {
         discord_id: userId,
         discord_name: request.discord_name || '',
@@ -154,6 +155,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         can_migrate: 'pending',
         status: 'received',
         language: request.language || 'en'
+        
       };
 
 
