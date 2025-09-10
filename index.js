@@ -146,12 +146,6 @@ client.on('messageReactionAdd', async (reaction, user) => {
       console.error(`❌ Falló el DM a <@${userId}>: ${err.message}`);
     }
 
-    await channel?.send(`${emoji} <@${userId}> ha sido ${emoji === '✅' ? 'aprobado' : 'rechazado'}. Idioma: ${lang}`);
-    if (!dmSent) {
-      await channel?.send(`⚠️ No se pudo enviar DM a <@${userId}>. Enviando mensaje aquí:\n${text}`);
-      await member.send(text);
-    }
-
     // ✅ Enviar datos al webhook solo si fue aprobado
     if (emoji === '✅') {
       const payload = {
