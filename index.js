@@ -141,19 +141,20 @@ require('./handleUserConfirmationReaction').handleUserConfirmationReaction({ cli
 
     // ✅ Enviar datos al webhook solo si fue aprobado
     if (emoji === '✅') {
-  const promptMessages = {
-    es: '✅ Reacciona con este emoji para confirmar tu migración.',
-    en: '✅ React with this emoji to confirm your migration.'
-  };
+ const promptMessages = {
+  es: 'Reacciona con ✅ para confirmar tu migración o ❌ para cancelarla.',
+  en: 'React with ✅ to confirm your migration or ❌ to cancel it.'
+};
 
-  const confirmText = promptMessages[lang] || promptMessages.en;
+const confirmText = promptMessages[lang] || promptMessages.en;
 
-  const prompt = await channel.send(`<@${userId}> ${confirmText}`);
-  await prompt.react('✅'); // El bot reacciona automáticamente
+const prompt = await channel.send(`<@${userId}> ${confirmText}`);
+await prompt.react('✅');
+await prompt.react('❌');
 
-  request.lastMessageId = prompt.id;
-  saveRequests();
-}
+request.lastMessageId = prompt.id;
+saveRequests();
+
 
 
 
