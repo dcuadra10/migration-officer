@@ -89,7 +89,7 @@ client.on('interactionCreate', async interaction => {
   await handleMigrationResponse(interaction);
 });
 
-const fetch = require('node-fetch');
+
 const { sendMigrationPrompt } = require('./migrationDecision');
 const { pendingRequests, saveRequests } = require('./submitMigration');
 
