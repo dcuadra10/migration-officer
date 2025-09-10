@@ -1,27 +1,8 @@
 const { EmbedBuilder, PermissionsBitField } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios'); // Línea 1
+const axios = require('axios');
 const { sendMigrationPrompt } = require('./migrationDecision');
-
-
-async function submitMigration(userState, userId) { // Línea 3
-  const payload = {
-    userId,
-    language: userState.language,
-    status: userState.status,
-    timestamp: new Date().toISOString()
-  };
-
-  try {
-    await axios.post(process.env.SHEETS_WEBHOOK_URL, payload); // Línea 10
-    console.log(`✅ Solicitud enviada para ${userId} con idioma ${payload.language}`);
-  } catch (err) {
-    console.error(`❌ Error al enviar solicitud: ${err.message}`);
-  }
-}
-
-
 
 const REQUESTS_FILE = path.join(__dirname, 'requests.json');
 const pendingRequests = new Map();
@@ -145,10 +126,14 @@ async function submitMigration(interaction) {
   const ticketMsg = await channel.send({ embeds: [ticketEmbed] });
   await ticketMsg.react('🚫');
 
+  // ✅ Botones de migración en el idioma correcto
+  await sendMigrationPrompt(channel, interaction.user, lang);
+
   pendingRequests.set(userId, {
     channelId: channel.id,
     language: lang,
     lastMessageId: ticketMsg.id,
+    approvalChannelId: process.env.APPROVAL_CHANNEL_ID,
     approvalMessageId
   });
 
@@ -161,11 +146,8 @@ async function submitMigration(interaction) {
     ephemeral: true
   });
 }
-await sendMigrationPrompt(channel, interaction.user, lang);
-
 
 // ✅ Exportar funciones
-module.exports = { submitMigration }; // Línea 21
 module.exports = {
   submitMigration,
   notifyAdminsForApproval,
